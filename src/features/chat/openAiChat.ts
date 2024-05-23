@@ -36,20 +36,37 @@ export async function getOpenAIChatResponseStream(
     dangerouslyAllowBrowser: true,
   });
 
-  const stream = await openai.chat.completions.create({
+  // Assistants
+  var assistant = await openai.beta.assistants.retrieve("");
+  var thread = await openai.beta.threads.retrieve("");
+
+  for (const message of messages) {
+    if (message.content == "") { continue; }
+
+    const m = await openai.beta.threads.messages.create(
+      thread.id,
+      {
+        role: "user",
+        content: message.content,     
+      }
+    );
+  }
+
+  const stream = openai.beta.threads.runs.stream(thread.id, {
+    assistant_id: assistant.id,
     model: model,
-    messages: messages,
-    stream: true,
-    max_tokens: 200,
-  });
+    stream: true
+  })
 
   const res = new ReadableStream({
     async start(controller: ReadableStreamDefaultController) {
       try {
-        for await (const chunk of stream) {
-          const messagePiece = chunk.choices[0].delta.content;
-          if (!!messagePiece) {
-            controller.enqueue(messagePiece);
+        for await (const event of stream) {
+          if (event.event === 'thread.message.delta') {
+            const chunk = event.data.delta.content?.[0];
+            if (chunk && chunk.type === 'text') {
+              controller.enqueue(chunk.text?.value ?? '');
+            }
           }
         }
       } catch (error) {
