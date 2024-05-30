@@ -12,12 +12,12 @@ import { SYSTEM_PROMPT } from "@/features/constants/systemPromptConstants";
 import { KoeiroParam, DEFAULT_PARAM } from "@/features/constants/koeiroParam";
 import { getOpenAIChatResponseStream } from "@/features/chat/openAiChat";
 import { getAnthropicChatResponseStream } from "@/features/chat/anthropicChat";
+import { getGoogleChatResponseStream } from "@/features/chat/googleChat";
 import { getLocalLLMChatResponseStream } from "@/features/chat/localLLMChat";
 import { getGroqChatResponseStream } from "@/features/chat/groqChat";
 import { getDifyChatResponseStream } from "@/features/chat/difyChat";
 import { Introduction } from "@/components/introduction";
 import { Menu } from "@/components/menu";
-import { GitHubLink } from "@/components/githubLink";
 import { Meta } from "@/components/meta";
 import "@/lib/i18n";
 import { useTranslation } from 'react-i18next';
@@ -32,6 +32,7 @@ export default function Home() {
   const [selectAIModel, setSelectAIModel] = useState("gpt-3.5-turbo");
   const [openAiKey, setOpenAiKey] = useState("");
   const [anthropicKey, setAnthropicKey] = useState("");
+  const [googleKey, setGoogleKey] = useState("");
   const [groqKey, setGroqKey] = useState("");
   const [localLlmUrl, setLocalLlmUrl] = useState("");
   const [difyKey, setDifyKey] = useState("");
@@ -57,7 +58,9 @@ export default function Home() {
   const [isVoicePlaying, setIsVoicePlaying] = useState(false);
   const { t } = useTranslation();
   const INTERVAL_MILL_SECONDS_RETRIEVING_COMMENTS = 20000; // 20秒
-  const [backgroundImageUrl, setBackgroundImageUrl] = useState("/bg-c.png");
+  const [backgroundImageUrl, setBackgroundImageUrl] = useState(
+    process.env.NEXT_PUBLIC_BACKGROUND_IMAGE_PATH !== undefined ? process.env.NEXT_PUBLIC_BACKGROUND_IMAGE_PATH : "/bg-c.png"
+  );
   const [dontShowIntroduction, setDontShowIntroduction] = useState(false);
 
   useEffect(() => {
@@ -72,6 +75,7 @@ export default function Home() {
       setSelectAIModel(params.selectAIModel || "gpt-3.5-turbo");
       setOpenAiKey(params.openAiKey || "");
       setAnthropicKey(params.anthropicKey || "");
+      setGoogleKey(params.googleKey || "");
       setGroqKey(params.groqKey || "");
       setDifyKey(params.difyKey || "");
       setDifyUrl(params.difyUrl || "");
@@ -102,6 +106,7 @@ export default function Home() {
       selectAIModel,
       openAiKey,
       anthropicKey,
+      googleKey,
       groqKey,
       difyKey,
       difyUrl,
@@ -134,6 +139,7 @@ export default function Home() {
     selectAIModel,
     openAiKey,
     anthropicKey,
+    googleKey,
     groqKey,
     difyKey,
     difyUrl,
@@ -287,16 +293,11 @@ export default function Home() {
         }
       } else {
         // ChatVERM original mode
-        if (selectAIService === "openai" && !openAiKey) {
-          setAssistantMessage(t('APIKeyNotEntered'));
-          return;
-        } else if (selectAIService === "anthropic" && !anthropicKey) {
-          setAssistantMessage(t('APIKeyNotEntered'));
-          return;
-        } else if (selectAIService === "groq" && !groqKey) {
-          setAssistantMessage(t('APIKeyNotEntered'));
-          return;
-        } else if (selectAIService === "dify" && !difyKey) {
+        if (selectAIService === "openai" && !openAiKey ||
+        selectAIService === "anthropic" && !anthropicKey ||
+        selectAIService === "google" && !googleKey ||
+        selectAIService === "groq" && !groqKey ||
+        selectAIService === "dify" && !difyKey) {
           setAssistantMessage(t('APIKeyNotEntered'));
           return;
         }
@@ -323,6 +324,8 @@ export default function Home() {
             stream = await getOpenAIChatResponseStream(messages, openAiKey, selectAIModel);
           } else if (selectAIService === "anthropic") {
             stream = await getAnthropicChatResponseStream(messages, anthropicKey, selectAIModel);
+          } else if (selectAIService === "google") {
+            stream = await getGoogleChatResponseStream(messages, googleKey, selectAIModel);
           } else if (selectAIService === "localLlm") {
             stream = await getLocalLLMChatResponseStream(messages, localLlmUrl, selectAIModel);
           } else if (selectAIService === "groq") {
@@ -407,7 +410,7 @@ export default function Home() {
         setChatProcessing(false);
       }
     },
-    [webSocketMode, koeiroParam, handleSpeakAi, codeLog, t, selectAIService, openAiKey, anthropicKey, chatLog, systemPrompt, selectAIModel, groqKey, difyKey, difyUrl]
+    [webSocketMode, koeiroParam, handleSpeakAi, codeLog, t, selectAIService, openAiKey, anthropicKey, groqKey, difyKey, chatLog, systemPrompt, selectAIModel, googleKey, localLlmUrl, difyUrl]
   );
 
   ///取得したコメントをストックするリストの作成（tmpMessages）
@@ -488,6 +491,9 @@ export default function Home() {
           <Introduction
             dontShowIntroduction={dontShowIntroduction}
             onChangeDontShowIntroduction={setDontShowIntroduction}
+            selectLanguage={selectLanguage}
+            setSelectLanguage={setSelectLanguage}
+            setSelectVoiceLanguage={setSelectVoiceLanguage}
           />
         )}
         <VrmViewer />
@@ -505,6 +511,8 @@ export default function Home() {
           onChangeOpenAiKey={setOpenAiKey}
           anthropicKey={anthropicKey}
           onChangeAnthropicKey={setAnthropicKey}
+          googleKey={googleKey}
+          onChangeGoogleKey={setGoogleKey}
           groqKey={groqKey}
           onChangeGroqKey={setGroqKey}
           localLlmUrl={localLlmUrl}
@@ -552,7 +560,6 @@ export default function Home() {
           setSelectVoiceLanguage={setSelectVoiceLanguage}
           setBackgroundImageUrl={setBackgroundImageUrl}
         />
-        <GitHubLink />
       </div>
     </>
   );

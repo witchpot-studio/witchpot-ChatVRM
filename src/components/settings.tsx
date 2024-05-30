@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { IconButton } from "./iconButton";
 import { TextButton } from "./textButton";
 import { Message } from "@/features/messages/messages";
+import { GitHubLink } from "./githubLink";
 import {
   KoeiroParam,
   PRESET_A,
@@ -23,6 +24,8 @@ type Props = {
   onChangeOpenAiKey: (event: React.ChangeEvent<HTMLInputElement>) => void;
   anthropicKey: string;
   onChangeAnthropicKey: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  googleKey: string;
+  onChangeGoogleKey: (event: React.ChangeEvent<HTMLInputElement>) => void;
   groqKey: string;
   onChangeGroqKey: (event: React.ChangeEvent<HTMLInputElement>) => void;
   localLlmUrl: string;
@@ -81,6 +84,8 @@ export const Settings = ({
   onChangeOpenAiKey,
   anthropicKey,
   onChangeAnthropicKey,
+  googleKey,
+  onChangeGoogleKey,
   groqKey,
   onChangeGroqKey,
   localLlmUrl,
@@ -131,11 +136,23 @@ export const Settings = ({
 }: Props) => {
   const { t } = useTranslation();
 
+  // Add this useEffect hook
+  useEffect(() => {
+    const storedData = window.localStorage.getItem('chatVRMParams');
+    if (storedData) {
+      const params = JSON.parse(storedData);
+      if (params.selectLanguage) {
+        setSelectLanguage(params.selectLanguage);
+      }
+    }
+  }, [setSelectLanguage]);
+  
   // オブジェクトを定義して、各AIサービスのデフォルトモデルを保存する
   // ローカルLLMが選択された場合、AIモデルを空文字に設定
   const defaultModels = {
     openai: 'gpt-3.5-turbo',
     anthropic: 'claude-3-haiku-20240307',
+    google: 'gemini-1.5-pro',
     groq: 'gemma-7b-it',
     localLlm: '',
     dify: '',
@@ -143,6 +160,7 @@ export const Settings = ({
 
   return (
     <div className="absolute z-40 w-full h-full bg-white/80 backdrop-blur ">
+      <GitHubLink />
       <div className="absolute m-24">
         <IconButton
           iconName="24/Close"
@@ -150,12 +168,15 @@ export const Settings = ({
           onClick={onClickClose}
         ></IconButton>
       </div>
+      <div className="absolute py-4 bg-[#413D43] text-center text-white font-Montserrat bottom-0 w-full">
+        powered by Pixiv, VRoid, Koemotion, VOICEVOX, OpenAI, Anthropic, Google, Groq, Dify
+      </div>
       <div className="max-h-full overflow-auto">
         <div className="text-text1 max-w-3xl mx-auto px-24 py-64 ">
           <div className="my-24 typography-32 font-bold">{t('Settings')}</div>
           <div className="my-40">
             <div className="my-16 typography-20 font-bold">
-              言語設定 - Language
+              {t('Language')}
             </div>
             <div className="my-8">
               <select
@@ -233,6 +254,7 @@ export const Settings = ({
                       >
                         <option value="openai">OpenAI</option>
                         <option value="anthropic">Anthropic</option>
+                        <option value="google">Google Gemini</option>
                         <option value="groq">Groq</option>
                         <option value="localLlm">{t('LocalLLM')}</option>
                         <option value="dify">Dify</option>
@@ -296,6 +318,34 @@ export const Settings = ({
                                 <option value="claude-3-opus-20240229">claude-3-opus-20240229</option>
                                 <option value="claude-3-sonnet-20240229">claude-3-sonnet-20240229</option>
                                 <option value="claude-3-haiku-20240307">claude-3-haiku-20240307</option>
+                              </select>
+                            </div>
+                          </div>
+                        );
+                      } else if (selectAIService === "google") {
+                        return (
+                          <div className="my-24">
+                            <div className="my-16 typography-20 font-bold">{t('GoogleAPIKeyLabel')}</div>
+                            <input
+                              className="text-ellipsis px-16 py-8 w-col-span-2 bg-surface1 hover:bg-surface1-hover rounded-8"
+                              type="text"
+                              placeholder="..."
+                              value={googleKey}
+                              onChange={onChangeGoogleKey}
+                            />
+                            <div className="my-16">
+                              {t('APIKeyInstruction')}<br />
+                              <Link url="https://aistudio.google.com/app/apikey?hl=ja" label="Google AI Studio" />
+                            </div>
+                            <div className="my-24">
+                              <div className="my-16 typography-20 font-bold">{t('SelectModel')}</div>
+                              <select
+                                className="px-16 py-8 w-col-span-2 bg-surface1 hover:bg-surface1-hover rounded-8"
+                                value={selectAIModel}
+                                onChange={(e) => setSelectAIModel(e.target.value)}
+                              >
+                                <option value="gemini-1.5-pro-latest">gemini-1.5-pro-latest</option>
+                                <option value="gemini-1.5-flash-latest">gemini-1.5-flash-latest</option>
                               </select>
                             </div>
                           </div>
@@ -665,8 +715,9 @@ export const Settings = ({
                   );
                 }
             })()}
-
           </div>
+          
+
           {chatLog.length > 0 && (
             <div className="my-40">
               <div className="my-8 grid-cols-2">
